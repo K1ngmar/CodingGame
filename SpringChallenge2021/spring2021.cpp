@@ -6,6 +6,8 @@
 
 using namespace std;
 
+
+
 class Cell {
 public:
     Cell () : rating(0) {
@@ -52,6 +54,14 @@ class Fuck {
                 return this->_sight < rhs._sight;
 	}
 };
+
+vector<Cell> map;
+
+bool    epicComparison(Fuck &f1, Fuck &f2) {
+    if (f1._sight == f2._sight)
+        return (map[f1._pos].richness > map[f2._pos].richness);
+    return (f1._sight < f2._sight);
+}
 
 enum action_type {
     WAIT = 0,
@@ -104,7 +114,6 @@ class Game {
 private:
         int day = 0;
         int nutrients = 0;
-        vector<Cell> map;
         vector<Tree> trees;
         vector<Action> actions;
         int mySun;
@@ -263,22 +272,18 @@ public:
         return false;
     }
 
-    void     plantHere(int start, int dist, int dir) {
-        // cerr << "start = " << start << " dist = " << dist << endl;
-        if (checkNeighbors(start) == false && (map[start].rating == -1 || map[start].rating > dist) && map[start].richness > 0) {
-            cerr << "FUCKING FUCK FUCK FUCK " << dist << endl;
+    void     plantHere(int start, int dist) {
+        if (checkNeighbors(start) == false && (map[start].rating == -1 || map[start].rating > dist) && map[start].richness > 0 && check_pos(start) == true) {
             map[start].rating = dist;
         }
         else if (map[start].rating == -1)
             map[start].rating = 0;
         for (int i = 0; i < 6; i++) {
             int cur = map[start].neighbors[i];
-            if (cur < 0)
+            if (cur < 0 || (map[cur].rating >= 0 && map[cur].rating <= dist + 1))
                 continue ;
-            if (map[cur].rating >= 0)
-                continue ;
-            if (check_pos(cur) == true && i != dir)
-                plantHere(cur, dist + 1, dir);
+            if (dist < 3)
+                plantHere(cur, dist + 1);
         }
     }
 
@@ -290,7 +295,7 @@ public:
 
     int     checkDir(int pos, int dir) {
         int ret = 0;
-        for (int i = 0; i < 2; i++) {
+        for (int i = 0; i < 3; i++) {
             pos = map[pos].neighbors[dir];
             if (pos == -1)
                 return ret;
@@ -302,50 +307,43 @@ public:
         return ret;
     }
 
-    bool    epicComparison(Fuck &f1, Fuck &f2) {
-        if (f1._sight == f2._sight)
-            return (map[f1._pos].richness > map[f2._pos].richness);
-        return (f1._sight < f2._sight);
-    }
-
     void    whereToPlant() {
-        cerr << "fakka met deze shit" << endl;
+        cerr << "kut plantjes" << endl;
         vector<Fuck> kutzooi;
-        int         kz = 0;
         for (int t = 0; t < trees.size(); t++) {
             if (trees[t].is_mine == false || trees[t].is_dormant == true)
                 continue ;
             clearMap();
-            plantHere(trees[t].cell_index, 0, -1);
+            cerr << "\n\nTESTING TREE ON pos = " << trees[t].cell_index << endl;
+            plantHere(trees[t].cell_index, 0);
             for (int i = 0; i < map.size(); i++) {
-                    cerr << "reeting = " << map[i].rating << " idx = " << map[i].cell_index;
                 if (map[i].rating > 1 && map[i].rating <= trees[t].size) {
+                    cerr << "reeting = " << map[i].rating << " idx = " << map[i].cell_index << endl;
                     kutzooi.push_back(Fuck(map[i].cell_index, trees[t].cell_index));
                     // return map[i].cell_index;
                 }
             }
-            int sight;
-            while (kz < kutzooi.size()) {
-                for (int j = 0; j < 6; j++) {
-                    kutzooi[kz]._sight += checkDir(kutzooi[kz]._pos, j);
-                }
-                kz++;
+        }
+        for (int i = 0; i < kutzooi.size(); i++) {
+            for (int j = 0; j < 6; j++) {
+                kutzooi[i]._sight += checkDir(kutzooi[i]._pos, j);
             }
-            if (kutzooi.size() == 0) {
-                growBadBois();
-                return ;
-            }
-            sort(begin(kutzooi), end(kutzooi));
-            sort(begin(kutzooi), end(kutzooi), epicComparison);
-            cout << "SEED " << kutzooi[0]._tree << ' ' << kutzooi[0]._pos << endl;
+            cerr << "kz = " << i << ", sight = " << kutzooi[i]._sight << ", pos = " << kutzooi[i]._pos << endl;
+        }
+        if (kutzooi.size() == 0) {
+            growBadBois();
             return ;
         }
+        sort(begin(kutzooi), end(kutzooi));
+        sort(begin(kutzooi), end(kutzooi), epicComparison);
+        cout << "SEED " << kutzooi[0]._tree << ' ' << kutzooi[0]._pos << endl;
+        return ;
     }
 	
 
     void	compute_next_action() {
         cerr << "day = " << day << std::endl;
-		// sort(trees.begin(), trees.end());
+		// sort(trees.begin(), trees.end());    
         if ((mySun == 0 && myTrees(0) > 0))
             cout << "WAIT" << endl;
         else if (myTrees(0) < 2 && day < 18)
