@@ -40,7 +40,7 @@ public:
     bool			is_mine;
     bool			is_dormant;
 	bool operator < (const Tree& rhs) const {
-            return this->size > rhs.size;
+            return this->cell_index < rhs.cell_index;
 	}
 };
 
@@ -280,7 +280,7 @@ public:
             map[start].rating = 0;
         for (int i = 0; i < 6; i++) {
             int cur = map[start].neighbors[i];
-            if (cur < 0 || (map[cur].rating >= 0 && map[cur].rating <= dist + 1))
+            if (cur < 0)
                 continue ;
             if (dist < 3)
                 plantHere(cur, dist + 1);
@@ -343,7 +343,7 @@ public:
 
     void	compute_next_action() {
         cerr << "day = " << day << std::endl;
-		// sort(trees.begin(), trees.end());    
+		sort(trees.begin(), trees.end());
         if ((mySun == 0 && myTrees(0) > 0))
             cout << "WAIT" << endl;
         else if (myTrees(0) < 2 && day < 18)
