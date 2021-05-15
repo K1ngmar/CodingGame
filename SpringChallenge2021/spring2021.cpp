@@ -121,7 +121,7 @@ private:
         int score;
         int oppScore;
         int oppIsWaiting;
-
+        int frick;
 public:
     void inputInitData() {
         int numberOfCells;
@@ -139,6 +139,7 @@ public:
         cin >> nutrients;
         cin >> mySun >> score;
         cin >> oppSun >> oppScore >> oppIsWaiting;
+        frick = 0;
 
         // input trees info
         trees.clear();
@@ -217,16 +218,21 @@ public:
 		}
 		return (true);
     }
+    int    getBestTree(int size) {
+        int pos = 36;
+        for (int i = 0; i < trees.size(); i++) {
+            if (trees[i].is_mine == false || trees[i].is_dormant == true)
+                continue ;
+            if (trees[i].size == size && map[trees[i].cell_index].richness >= map[pos].richness)
+                pos = trees[i].cell_index; 
+        }
+        return pos;
+    }
  
 	void	harvest() {
 		cerr << "I am about to harvest" << endl;
-		for (int i = 0; i < trees.size(); i++) {
-			if (trees[i].is_mine == true && trees[i].is_dormant == false && trees[i].size == 3) {
-				cout << "COMPLETE " << trees[i].cell_index << endl;
-				return ;
-			}
-		}
-        cout <<  "WAIT" << endl;
+		
+		cout << "COMPLETE " << getBestTree(3) << endl;
 	}
 
     bool    gekkeBoom(int i) {
@@ -237,22 +243,24 @@ public:
 
     void	growBadBois() {
 		cerr << "I am going to grow some badboys" << endl;
-		for (int i = 0; i < trees.size(); i++) {
-            if (myTrees(3) > 3 || (day >= 20 && myTrees(3) > 0)) {
-                harvest();
-                return ;
-            }
-			else if (gekkeBoom(i) == true && trees[i].size == 0 && day < 20) {
-                cout << "GROW " << trees[i].cell_index << endl;
-                return ;
-            } else if (gekkeBoom(i) == true && trees[i].size == 1 && (myTrees(2) < 3 || (day >= 20 && myTrees(3) == 0))) {
-                cout << "GROW " << trees[i].cell_index << endl;
-                return ;
-            } else if (gekkeBoom(i) == true && trees[i].size == 2 && (myTrees(2) > 2 || (day >= 20 && myTrees(3) == 0))) {
-                cout << "GROW " << trees[i].cell_index << endl;
+        if (myTrees(3) > 2 || (day >= 20 && myTrees(3) > 0)) {
+            harvest();
+            return ;
+        }
+        if (myTrees(0) < 2 && myTrees() < 10 && day < 18) {
+            Fuck bestmove = getBestPos(1);
+            if (bestmove._tree >= 0) {
+                std::cout << "GROW " << bestmove._tree << endl;
                 return ;
             }
         }
+        for (int i = 0; i < trees.size(); i++) {
+            if (trees[i].is_mine == false || trees[i].is_dormant == true)
+                continue ;
+            cout << "GROW " << trees[i].cell_index << endl;
+            return ;
+        }
+        
 		cout << "WAIT" << endl;
 	}
 
@@ -306,19 +314,18 @@ public:
         }
         return ret;
     }
-
-    void    whereToPlant() {
-        cerr << "kut plantjes" << endl;
+    
+    Fuck    getBestPos(int mod) {
         vector<Fuck> kutzooi;
         for (int t = 0; t < trees.size(); t++) {
-            if (trees[t].is_mine == false || trees[t].is_dormant == true)
+            if (trees[t].is_mine == false || trees[t].is_dormant == true || (mod == 1 && trees[t].size == 3))
                 continue ;
             clearMap();
-            cerr << "\n\nTESTING TREE ON pos = " << trees[t].cell_index << endl;
+            // cerr << "\n\nTESTING TREE ON pos = " << trees[t].cell_index << endl;
             plantHere(trees[t].cell_index, 0);
             for (int i = 0; i < map.size(); i++) {
-                if (map[i].rating > 1 && map[i].rating <= trees[t].size) {
-                    cerr << "reeting = " << map[i].rating << " idx = " << map[i].cell_index << endl;
+                if (map[i].rating > 1 && map[i].rating <= ((trees[t].size + mod > 3) ? trees[t].size : trees[t].size + mod)) {
+                    // cerr << "reeting = " << map[i].rating << " idx = " << map[i].cell_index << endl;
                     kutzooi.push_back(Fuck(map[i].cell_index, trees[t].cell_index));
                     // return map[i].cell_index;
                 }
@@ -328,16 +335,22 @@ public:
             for (int j = 0; j < 6; j++) {
                 kutzooi[i]._sight += checkDir(kutzooi[i]._pos, j);
             }
-            cerr << "kz = " << i << ", sight = " << kutzooi[i]._sight << ", pos = " << kutzooi[i]._pos << endl;
+            // cerr << "kz = " << i << ", sight = " << kutzooi[i]._sight << ", pos = " << kutzooi[i]._pos << endl;
         }
-        if (kutzooi.size() == 0) {
-            growBadBois();
-            return ;
-        }
+        if (kutzooi.size() == 0)
+            return Fuck(-1, -1);
         sort(begin(kutzooi), end(kutzooi));
         sort(begin(kutzooi), end(kutzooi), epicComparison);
-        cout << "SEED " << kutzooi[0]._tree << ' ' << kutzooi[0]._pos << endl;
-        return ;
+        return (kutzooi[0]);
+    }
+
+    void    whereToPlant() {
+        cerr << "kut plantjes" << endl;
+        Fuck rip = getBestPos(0);
+        if (rip._tree == -1)
+            growBadBois();
+        else
+            cout << "SEED " << rip._tree << ' ' << rip._pos << endl;
     }
 	
 
@@ -346,10 +359,11 @@ public:
 		sort(trees.begin(), trees.end());
         if ((mySun == 0 && myTrees(0) > 0))
             cout << "WAIT" << endl;
-        else if (myTrees(0) < 2 && day < 18)
+        else if (myTrees(0) < 2 && myTrees() < 10 && day < 17)
             whereToPlant();
         else
 			growBadBois();
+        frick++;
     }
 };
 
