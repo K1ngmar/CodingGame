@@ -302,6 +302,12 @@ public:
         return ret;
     }
 
+    bool    epicComparison(Fuck &f1, Fuck &f2) {
+        if (f1._sight == f2._sight)
+            return (map[f1._pos].richness > map[f2._pos].richness);
+        return (f1._sight < f2._sight);
+    }
+
     void    whereToPlant() {
         cerr << "fakka met deze shit" << endl;
         vector<Fuck> kutzooi;
@@ -329,7 +335,8 @@ public:
                 growBadBois();
                 return ;
             }
-         sort(begin(kutzooi), end(kutzooi));
+            sort(begin(kutzooi), end(kutzooi));
+            sort(begin(kutzooi), end(kutzooi), epicComparison);
             cout << "SEED " << kutzooi[0]._tree << ' ' << kutzooi[0]._pos << endl;
             return ;
         }
