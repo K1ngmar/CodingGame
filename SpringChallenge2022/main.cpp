@@ -1,7 +1,7 @@
 #include <iostream>
 #include <string>
 #include <vector>
-#include <map>
+#include <set>
 #include <algorithm>
 
 /*
@@ -10,7 +10,7 @@
 
 	struct Entity;
 
-	typedef std::map<size_t, Entity> map_rating;
+	typedef std::vector<Entity> vectity;
 
 /*
 	TYPES
@@ -69,13 +69,18 @@ struct Entity {
 	Global Variables
 */
 
-Position			base;
-int					base_health;
-int 				mana;
-std::vector<Entity>	heroes;
-std::vector<Entity>	monsters;
-std::vector<Entity>	opponents;
-std::vector<Position> active_targets;
+Position		base;
+int				base_health;
+int 			mana;
+vectity			heroes;
+vectity			monsters;
+vectity			opponents;
+std::set<int>	active_targets;
+static const Position default_hero_pos[] = {
+		{5000, 800},
+		{3500, 3500},
+		{1500, 5000},
+	};
 
 /*
 	ACTUAL CODE
@@ -115,10 +120,11 @@ static void parse_round()
 	Entity	entity;
 	int		type;
 	int		target;
-
-	for (int i = 0; i < 2; ++i) {
-		std::cin >> base_health >> mana; std::cin.ignore();
-	}
+	int 	bh, mn;
+	
+	std::cin >> base_health >> mana; std::cin.ignore();
+	std::cin >> bh >> mn; std::cin.ignore();
+		
 	std::cin >> entity_count; std::cin.ignore();
 
 	clear_entities();
@@ -143,72 +149,160 @@ static void parse_round()
 	}
 }
 
-size_t		calc_distance(Position& h, Position& e)
+size_t		distance(const Position& h, const Position& e)
 {
 	return (abs(h.x - e.x) + abs(h.y - e.y));
 }
 
-map_rating	create_rating()
-{
-	map_rating	rating;
-	size_t		dist;
+/*
+	LOGIC
+*/
 
-	for (size_t i = 0; i < monsters.size(); ++i) {
-		dist = calc_distance(base, monsters[i].pos);
-		rating[dist] = monsters[i];
+bool		is_closest_hero(const Entity& hero, const Position& pos)
+{
+	Entity	closest;
+	size_t	closest_dist = 420691337;
+
+	for (vectity::iterator i = heroes.begin(); i != heroes.end(); ++i) {
+		if (distance(i->pos, pos) < closest_dist) {
+			closest = *i;
+			closest_dist = distance(i->pos, pos);
+		}
 	}
-	return rating;
+	return (closest.id == hero.id);
 }
 
-static void	walk_pos(Position& target, bool& moved)
+Entity		close_to_dangerous_entity(const Entity& cur)
 {
-	moved = true;
-	active_targets.push_back(target);
-	std::cout << "MOVE " << target.x << " " << target.y << std::endl;
+	Entity closest;
+	size_t closest_dist = 420691337;
+
+	for (vectity::iterator i = monsters.begin(); i != monsters.end(); ++i) {
+		if (is_closest_hero(cur, i->pos)) {
+			if (distance(base, i->pos) < closest_dist) {
+				closest_dist = distance(base, i->pos);
+				closest = *i;
+			}
+		}
+	}
+	return closest;
+}
+
+bool		too_far_from_base(const Entity& hero)
+{
+	size_t dist = distance(hero.pos, base);
+
+	return (dist > 8500);
+}
+
+Position	next_pos(const Entity& entity)
+{
+	Position next_pos;
+	next_pos.x = entity.pos.x + entity.trajectory.x;
+	next_pos.y = entity.pos.y + entity.trajectory.y;
+	return (next_pos);
+}
+
+std::string	move_pos(const Position& pos)
+{
+	return "MOVE " + std::to_string(pos.x) + " " + std::to_string(pos.y);
+}
+
+bool		is_moving_to_base(const Entity& entity)
+{
+	return distance(next_pos(entity), base) <  distance(entity.pos, base);
+}
+
+bool		heroes_spread(const Entity& hero)
+{
+	size_t dist;
+	for (vectity::iterator i = heroes.begin(); i != heroes.end(); ++i) {
+		dist = distance(hero.pos, i->pos);
+		if (dist < 1500 && dist > 0)
+			return false;
+	}
+	return true;
+}
+
+Entity		get_closest_hero(const Position& pos)
+{
+	Entity	hero;
+	size_t	dist = 420691337;
+	for (vectity::iterator i = heroes.begin(); i != heroes.end(); ++i) {
+		if (distance(hero.pos, i->pos) < dist && distance(hero.pos, i->pos) > 0) {
+			dist = distance(hero.pos, i->pos);
+			hero = *i;
+		}
+	}
+	return hero;
+}
+
+std::string	spread_heroes(const Entity& hero)
+{
+	Entity closest = get_closest_hero(hero.pos);
+	int idx = 0;
+	while (heroes[idx].id != hero.id)
+		++idx;
+	return move_pos(default_hero_pos[idx]);
+}
+
+std::string	windy_day()
+{
+	return "SPELL WIND 8900 4500";
+}
+
+std::string	generate_move(const Entity& hero)
+{
+	if (too_far_from_base(hero) == true) {
+		Entity closest = close_to_dangerous_entity(hero);
+		// attack if entity is moving towards the base
+		if (is_moving_to_base(closest) == true) {
+			return move_pos(closest.pos);
+			active_targets.insert(closest.id);
+		}
+		// return to base
+		else {
+			return move_pos(base);
+		}
+	}
+	// hero is not too far from base
+	else {
+		if (monsters.size() > 0) {
+			Entity closest = close_to_dangerous_entity(hero);
+			if (distance(closest.pos, hero.pos) <= 1280 && mana > 10) {
+				return windy_day();
+			}
+			if (is_moving_to_base(closest) == true) {
+				if (distance(closest.pos, base) < 2500 || active_targets.find(closest.id) == active_targets.end()) {
+					active_targets.insert(closest.id);
+					return move_pos(closest.pos); // maybe next pos?
+				}
+				// find best target
+				else {
+					return move_pos(closest.pos); // make new function
+				}
+			}
+			else {
+				return spread_heroes(hero); // spread heroes
+			}
+		}
+		// spread heroes
+		else {
+			return spread_heroes(hero);
+		}
+	}
 }
 
 int main()
 {
-	Entity hero;
-	map_rating mappert;
-	map_rating::iterator moves;
-	bool moved;
-	int dist;
-
 	init();
 	// game loop
 	while (1)
 	{
 		parse_round();
-		mappert = create_rating();
 		for (size_t i = 0; i < heroes.size(); ++i)
 		{
-			moves = mappert.begin();
-			moved = false;
-			for (size_t j = 0; j < 3; j++)
-			{
-				if (moves != mappert.end())
-				{
-					dist = calc_distance(base, moves->second.pos);
-					if (dist < 3000) {
-						walk_pos(moves->second.pos, moved);
-						break ;
-					}
-					else if (dist < 7000 && std::find(active_targets.begin(), active_targets.end(), moves->second.pos) == active_targets.end()) {
-						walk_pos(moves->second.pos, moved);
-						break;
-					}
-					else {
-						++moves;
-						continue ;
-					}
-					break ;
-				}
-			}
-			if (moved == false)
-				std::cout << "WAIT" << std::endl;
-
-			// In the first league: MOVE <x> <y> | WAIT; In later leagues: | SPELL <spellParams>;
+			std::cout << generate_move(heroes[i]) << std::endl;
 		}
 	}
 }
