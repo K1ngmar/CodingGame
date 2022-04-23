@@ -50,7 +50,7 @@ Position	Entity::nextPos() const {
 
 std::string	Entity::moveDefaultPos() const
 {
-	if (this->is_attacker == true)
-		return move(center);
+	// if (this->is_attacker == true)
+	// 	return move(center);
 	return move(this->default_pos);
 }

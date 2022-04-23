@@ -4,6 +4,7 @@
 #include "Position.hpp"
 #include "Entity.hpp"
 #include <vector>
+#include <set>
 
 //////////
 // Game //
@@ -15,7 +16,9 @@ class Game
 	//////////////
 	public:
 
-		typedef std::vector<Entity> vectity;
+		typedef std::vector<Entity>			vectity;
+		typedef std::set<int>				target_map;
+		typedef std::map<size_t, Entity>	dm;
 
 	//////////////////////
 	// Member variables //
@@ -29,9 +32,11 @@ class Game
 		int 		mana;
 		int			enemy_mana;
 		vectity		heroes;
-		vectity		monsters;
 		vectity		opponents;
+		dm			monsters;
 		size_t		round_nb;
+		target_map	active_targets;
+		
 
 	//////////////////
 	// Construction //
@@ -50,29 +55,37 @@ class Game
 	///////////////////
 	private:
 
-		void clearEntities();
-		void setEntity(Entity& entity);
+		void	clearEntities();
+		void	setEntity(Entity& entity);
 
 	public:
 
-		void parseRound();
+		void	createDistMap();
+		void	parseRound();
 
 	/////////////
 	// Helpers //
 	/////////////
 	public:
 
-		bool	isClosestHero(const Entity& hero, const Position& pos);
-
-		Entity	getClosestDangerousEntity(const Entity& hero);
+		// bool isClosestTarget(const Entity& hero);
+		bool isClosestHero(int id, Position& pos) const;
+		bool annoyingEnemy(const Entity& target) const;
 
 	///////////
 	// Logic //
 	///////////
 	public:
 
+		Entity		getBestDefendingTarget(const Entity& hero);
 		std::string generateAction(const Entity& hero);
 
+	/////////////////
+	/// Strategies //
+	/////////////////
+	public:
+
 		std::string	defensiveStrat(const Entity& hero);
+		std::string	attackingStrat(const Entity& hero);
 
 };

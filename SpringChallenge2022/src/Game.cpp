@@ -12,8 +12,8 @@
 #endif
 
 static const Position default_hero_pos[] = {
-	{5000, 2000},
-	{3500, 3500},
+	{5000, 1000},
+	{3500, 3000},
 	{1500, 5000},
 };
 
@@ -48,6 +48,7 @@ Game::Game(): round_nb(0)
 		heroes.clear();
 		monsters.clear();
 		opponents.clear();
+		active_targets.clear();
 	}
 
 	void Game::setEntity(Entity& entity)
@@ -55,7 +56,7 @@ Game::Game(): round_nb(0)
 		switch(entity.type)
 		{
 			case Entity::MONSTER:
-				monsters.push_back(entity); break;
+				monsters[distance(base, entity.pos)] = entity; break;
 			case Entity::HERO:
 				entity.is_attacker = heroes.size() == 1;
 				entity.default_pos = default_hero_pos[heroes.size()];
@@ -67,6 +68,13 @@ Game::Game(): round_nb(0)
 	}
 
 // public
+
+void Game::createDistMap()
+{
+	for (Entity& hero: heroes)
+		for (auto monster: monsters)
+			hero.targets[distance(hero.pos, monster.second.pos)] = monster.second;
+}
 
 void Game::parseRound()
 {
@@ -91,88 +99,92 @@ void Game::parseRound()
 		>> entity.trajectory.x \
 		>> entity.trajectory.y \
 		>> entity.is_targeting \
-		>> entity.target;
+		>> entity.targeting;
 		std::cin.ignore();
 		entity.is_attacker = false;
 		entity.default_pos = {center};
 
 		this->setEntity(entity);
 	}
+	createDistMap();
 	++round_nb;
 }
 
-////////////////
-// Non member //
-////////////////
+/////////////
+// Helpers //
+/////////////
 
-bool		Game::isClosestHero(const Entity& hero, const Position& pos)
+bool	Game::isClosestHero(int hero_id, Position& pos) const
 {
-	Entity	closest;
-	size_t	closest_dist = 420691337;
+	size_t	dist = 420691337;
+	int		id = hero_id;
 
-	for (vectity::iterator i = heroes.begin(); i != heroes.end(); ++i) {
-		if (distance(i->pos, pos) < closest_dist) {
-			closest = *i;
-			closest_dist = distance(i->pos, pos);
+	for (const Entity& hero: heroes) {
+		if (distance(hero.pos, pos) < dist) {
+			id = hero.id;
+			dist = distance(hero.pos, pos);
 		}
 	}
-	return (closest.id == hero.id);
+	return (hero_id == id);
 }
 
-Entity		Game::getClosestDangerousEntity(const Entity& cur)
+bool Game::annoyingEnemy(const Entity& target) const
 {
-	Entity	closest;
-	bool	is_set = false;
-	size_t	closest_dist = 420691337;
-
-	for (vectity::iterator i = monsters.begin(); i != monsters.end(); ++i) {
-		if (distance(base, i->pos) < closest_dist) {
-			if (isClosestHero(cur, i->pos) == true || (i + 1 == monsters.end() && is_set == false)) {
-				closest_dist = distance(base, i->pos);
-				closest = *i;
-				is_set = true;
-			}
+	std::cerr << "checking for annoying enemy..." << std::endl;
+	for (const Entity& enemy: opponents) {
+		std::cerr << "checkin..." << std::endl;
+		if (target.isInSpellRange(enemy.nextPos()) == true) {
+			std::cerr << "BRO WTF" << std::endl;
+			return true;
 		}
 	}
-	return closest;
+	return false;
 }
 
 ///////////
 // Logic //
 ///////////
 
+Entity Game::getBestDefendingTarget(const Entity& hero)
+{
+	dm::iterator itr = monsters.begin();
+
+	while (itr != monsters.end() && itr->second.targeting == Entity::BASE) {
+		if (((active_targets.find(itr->second.id) == active_targets.end()) || distance(itr->second.pos, hero.pos) < 800) && isClosestHero(hero.id, itr->second.pos) == true)
+			return (itr->second);
+		++itr;
+	}
+	return hero.targets.begin()->second;
+}
+
+////////////////
+// Strategies //
+////////////////
+
 std::string	Game::defensiveStrat(const Entity& hero)
 {
 	if (monsters.size() > 0) {
-		Entity danger = getClosestDangerousEntity(hero);
-		if (hero.is_attacker == true && monsters.size() < 3)
-			return hero.moveDefaultPos() + " no_threat";
-		else if (danger.isCloseToPos(base) == true)
-		{
-			if (danger.isInWindRange(hero.pos) && mana > 10 && danger.shield_life == 0)
+		Entity target = getBestDefendingTarget(hero);
+
+		if (monsters.size() > 2 || active_targets.find(target.id) == active_targets.end()) {
+			active_targets.insert(target.id);
+			if (target.shield_life == 0 && target.isCloseToPos(base) && annoyingEnemy(target) == true && mana > 10)
+				return shield(target.id);
+			if (target.shield_life == 0 && target.isCloseToPos(base) && target.isInWindRange(hero.pos) && mana > 10)
 				return windy_day(center);
-			else
-				return move(danger.pos) + " next_pos?";
-		}
-		else {
-			if (hero.is_attacker == false && distance(hero.pos, base) > 7500 && danger.movingToPos(base) == false)
-				return hero.moveDefaultPos() + " bored";
-			else
-				return move(danger.pos) + " pos++;";
+			if (target.movingToPos(base) == true)
+				return move(target.pos);
 		}
 	}
-	else
-		return hero.moveDefaultPos() + " default?";
+	return hero.moveDefaultPos();
+}
+
+std::string Game::attackingStrat(const Entity& hero)
+{
+
 }
 
 std::string Game::generateAction(const Entity& hero)
 {
-	// if (base_health > enemy_health) {
-		return this->defensiveStrat(hero);
-	// }
-	// else {
-	// 	if (round_nb < 30)
-	// 		this->farming_strat();
-	// 	else if ()
-	// }
+	return this->defensiveStrat(hero);
 }

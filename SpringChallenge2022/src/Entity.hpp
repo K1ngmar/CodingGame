@@ -3,6 +3,7 @@
 
 #include "Position.hpp"
 #include <istream>
+#include <map>
 
 static const Position center = {8900, 4500};
 
@@ -24,6 +25,8 @@ struct Entity
 		ENEMY
 	};
 
+	typedef std::map<size_t, Entity>	dist_map;
+
 ///////////////
 // Variables //
 ///////////////
@@ -38,7 +41,8 @@ struct Entity
 	int			health;
 	Position	trajectory;
 	int			is_targeting;
-	Target		target;
+	Target		targeting;
+	dist_map	targets;
 
 /////////////
 // Helpful //
