@@ -38,11 +38,6 @@ struct Position
 /*-- #include "src/Position.hpp" end --*/
 #include <istream>
 
-static const Position base_positions[] = {
-	{0,0},
-	{17630, 9000}
-};
-
 static const Position center = {8900, 4500};
 
 struct Entity
@@ -87,7 +82,9 @@ public:
 	bool	isCloseToPos(const Position& pos) const;
 	bool	isInSpellRange(const Position& pos) const;
 	bool	isInWindRange(const Position& pos) const;
-	
+
+	bool	movingToPos(const Position& pos) const;
+
 	Position	nextPos() const;
 
 	std::string	moveDefaultPos() const;
@@ -271,9 +268,12 @@ bool	Entity::isInWindRange(const Position& pos) const {
 	return (distance(pos, this->pos) <= 1280);
 }
 
+bool	Entity::movingToPos(const Position& pos) const {
+	return distance(this->nextPos(), pos) <  distance(this->pos, pos);
+}
+
 Position	Entity::nextPos() const {
 	Position ret;
-	std::cerr << "x: " << this->trajectory.x << ", y: " << this->trajectory.y << std::endl;
 	ret.x = this->pos.x + this->trajectory.x;
 	ret.y = this->pos.y + this->trajectory.y;
 	return ret;
@@ -318,6 +318,11 @@ static const Position default_hero_pos[] = {
 	{5000, 2000},
 	{3500, 3500},
 	{1500, 5000},
+};
+
+static const Position base_positions[] = {
+	{0,0},
+	{17630, 9000}
 };
 
 //////////////////
@@ -419,14 +424,16 @@ bool		Game::isClosestHero(const Entity& hero, const Position& pos)
 
 Entity		Game::getClosestDangerousEntity(const Entity& cur)
 {
-	Entity closest;
-	size_t closest_dist = 420691337;
+	Entity	closest;
+	bool	is_set = false;
+	size_t	closest_dist = 420691337;
 
 	for (vectity::iterator i = monsters.begin(); i != monsters.end(); ++i) {
-		if (this->isClosestHero(cur, i->pos)) {
-			if (distance(base, i->pos) < closest_dist) {
+		if (distance(base, i->pos) < closest_dist) {
+			if (isClosestHero(cur, i->pos) == true || (i + 1 == monsters.end() && is_set == false)) {
 				closest_dist = distance(base, i->pos);
 				closest = *i;
+				is_set = true;
 			}
 		}
 	}
@@ -441,15 +448,21 @@ std::string	Game::defensiveStrat(const Entity& hero)
 {
 	if (monsters.size() > 0) {
 		Entity danger = getClosestDangerousEntity(hero);
-		if (danger.isCloseToPos(base) == true) {
-			// use wind
+		if (hero.is_attacker == true && monsters.size() < 3)
+			return hero.moveDefaultPos() + " no_threat";
+		else if (danger.isCloseToPos(base) == true)
+		{
 			if (danger.isInWindRange(hero.pos) && mana > 10 && danger.shield_life == 0)
 				return windy_day(center);
 			else
 				return move(danger.nextPos()) + " next_pos?";
 		}
-		else
-			return move(danger.nextPos()) + " pos++;";
+		else {
+			if (hero.is_attacker == false && distance(hero.pos, base) > 7500 && danger.movingToPos(base) == false)
+				return hero.moveDefaultPos() + " bored";
+			else
+				return move(danger.nextPos()) + " pos++;";
+		}
 	}
 	else
 		return hero.moveDefaultPos() + " default?";

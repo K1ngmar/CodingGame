@@ -4,11 +4,6 @@
 #include "Position.hpp"
 #include <istream>
 
-static const Position base_positions[] = {
-	{0,0},
-	{17630, 9000}
-};
-
 static const Position center = {8900, 4500};
 
 struct Entity
@@ -53,7 +48,9 @@ public:
 	bool	isCloseToPos(const Position& pos) const;
 	bool	isInSpellRange(const Position& pos) const;
 	bool	isInWindRange(const Position& pos) const;
-	
+
+	bool	movingToPos(const Position& pos) const;
+
 	Position	nextPos() const;
 
 	std::string	moveDefaultPos() const;

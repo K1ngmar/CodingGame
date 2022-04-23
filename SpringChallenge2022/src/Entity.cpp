@@ -37,9 +37,12 @@ bool	Entity::isInWindRange(const Position& pos) const {
 	return (distance(pos, this->pos) <= 1280);
 }
 
+bool	Entity::movingToPos(const Position& pos) const {
+	return distance(this->nextPos(), pos) <  distance(this->pos, pos);
+}
+
 Position	Entity::nextPos() const {
 	Position ret;
-	std::cerr << "x: " << this->trajectory.x << ", y: " << this->trajectory.y << std::endl;
 	ret.x = this->pos.x + this->trajectory.x;
 	ret.y = this->pos.y + this->trajectory.y;
 	return ret;
