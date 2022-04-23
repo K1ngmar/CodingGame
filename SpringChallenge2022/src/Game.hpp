@@ -33,9 +33,6 @@ class Game
 		vectity		opponents;
 		size_t		round_nb;
 
-		static const Position default_hero_pos[];
-
-
 	//////////////////
 	// Construction //
 	//////////////////
@@ -60,11 +57,22 @@ class Game
 
 		void parseRound();
 
+	/////////////
+	// Helpers //
+	/////////////
+	public:
+
+		bool	isClosestHero(const Entity& hero, const Position& pos);
+
+		Entity	getClosestDangerousEntity(const Entity& hero);
+
 	///////////
 	// Logic //
 	///////////
 	public:
 
 		std::string generateAction(const Entity& hero);
+
+		std::string	defensiveStrat(const Entity& hero);
 
 };

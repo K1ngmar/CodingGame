@@ -38,6 +38,13 @@ struct Position
 /*-- #include "src/Position.hpp" end --*/
 #include <istream>
 
+static const Position base_positions[] = {
+	{0,0},
+	{17630, 9000}
+};
+
+static const Position center = {8900, 4500};
+
 struct Entity
 {
 ///////////
@@ -61,7 +68,8 @@ struct Entity
 ///////////////
 
 	int			id;
-	Position	default_pos; // only set for heroes
+	bool		is_attacker;
+	Position	default_pos;
 	Type		type;
 	Position	pos;
 	int 		shield_life;
@@ -70,12 +78,6 @@ struct Entity
 	Position	trajectory;
 	int			is_targeting;
 	Target		target;
-
-//////////////////
-// Construction //
-//////////////////
-
-	Entity();
 
 /////////////
 // Helpful //
@@ -87,6 +89,8 @@ public:
 	bool	isInWindRange(const Position& pos) const;
 	
 	Position	nextPos() const;
+
+	std::string	moveDefaultPos() const;
 
 }; /* end of Entity class */
 
@@ -128,9 +132,6 @@ class Game
 		vectity		opponents;
 		size_t		round_nb;
 
-		static const Position default_hero_pos[];
-
-
 	//////////////////
 	// Construction //
 	//////////////////
@@ -155,12 +156,23 @@ class Game
 
 		void parseRound();
 
+	/////////////
+	// Helpers //
+	/////////////
+	public:
+
+		bool	isClosestHero(const Entity& hero, const Position& pos);
+
+		Entity	getClosestDangerousEntity(const Entity& hero);
+
 	///////////
 	// Logic //
 	///////////
 	public:
 
 		std::string generateAction(const Entity& hero);
+
+		std::string	defensiveStrat(const Entity& hero);
 
 };
 
@@ -201,7 +213,7 @@ int main()
 /*-- #include "src/Action.hpp" end --*/
 
 std::string	move(const Position& pos) {
-	return "MOVE " + std::to_string(pos.x) + " " + std::to_string(pos.y) + " Moving";
+	return "MOVE " + std::to_string(pos.x) + " " + std::to_string(pos.y);
 }
 
 std::string	windy_day(const Position& pos) {
@@ -221,6 +233,8 @@ std::string	control(const int id, const Position& pos) {
 
 /*-- #include "src/Entity.hpp" start --*/
 /*-- #include "src/Entity.hpp" end --*/
+/*-- #include "src/Action.hpp" start --*/
+/*-- #include "src/Action.hpp" end --*/
 #include <iostream>
 
 ///////////////
@@ -241,26 +255,6 @@ std::istream& operator >> (std::istream& is, Entity::Target& target) {
 	return is;
 }
 
-//////////////////
-// Construction //
-//////////////////
-
-Entity::Entity()
-{
-	std::cin >> this->id \
-	>> this->type \
-	>> this->pos.x \
-	>> this->pos.y \
-	>> this->shield_life \
-	>> this->is_controlled \
-	>> this->health \
-	>> this->trajectory.x \
-	>> this->trajectory.y \
-	>> this->is_targeting \
-	>> this->target;
-	std::cin.ignore();
-}
-
 /////////////
 // Helpful //
 /////////////
@@ -278,8 +272,18 @@ bool	Entity::isInWindRange(const Position& pos) const {
 }
 
 Position	Entity::nextPos() const {
-	return {this->pos.x + this->trajectory.x,
-			this->pos.y + this->trajectory.y};
+	Position ret;
+	std::cerr << "x: " << this->trajectory.x << ", y: " << this->trajectory.y << std::endl;
+	ret.x = this->pos.x + this->trajectory.x;
+	ret.y = this->pos.y + this->trajectory.y;
+	return ret;
+}
+
+std::string	Entity::moveDefaultPos() const
+{
+	if (this->is_attacker == true)
+		return move(center);
+	return move(this->default_pos);
 }
 
 /*-- File: src/Entity.cpp end --*/
@@ -302,17 +306,19 @@ Position	Entity::nextPos() const {
 /*-- #include "src/action.hpp" end --*/
 #include <iostream>
 
-const Position Game::default_hero_pos[] = {
-	{5000, 800},
+#define DEBUG 1
+
+#if DEBUG == 1
+    #define TRACE() dprintf(2, "%s:%d\n", __FUNCTION__,  __LINE__)
+#else
+    #define TRACE()
+#endif
+
+static const Position default_hero_pos[] = {
+	{5000, 2000},
 	{3500, 3500},
 	{1500, 5000},
 };
-
-static const Position base_positions[] = {
-	{0,0},
-	{17630, 9000}
-};
-
 
 //////////////////
 // Construction //
@@ -349,8 +355,9 @@ Game::Game(): round_nb(0)
 			case Entity::MONSTER:
 				monsters.push_back(entity); break;
 			case Entity::HERO:
+				entity.is_attacker = heroes.size() == 1;
+				entity.default_pos = default_hero_pos[heroes.size()];
 				heroes.push_back(entity);
-				heroes[heroes.size() - 1].default_pos = default_hero_pos[heroes.size() - 1];
 				break;
 			case Entity::OPPONENT:
 				opponents.push_back(entity); break;
@@ -372,18 +379,93 @@ void Game::parseRound()
 	for (int i = 0; i < entity_count; ++i)
 	{
 		Entity	entity;
+		std::cin >> entity.id \
+		>> entity.type \
+		>> entity.pos.x \
+		>> entity.pos.y \
+		>> entity.shield_life \
+		>> entity.is_controlled \
+		>> entity.health \
+		>> entity.trajectory.x \
+		>> entity.trajectory.y \
+		>> entity.is_targeting \
+		>> entity.target;
+		std::cin.ignore();
+		entity.is_attacker = false;
+		entity.default_pos = {center};
 
 		this->setEntity(entity);
 	}
+	++round_nb;
+}
+
+////////////////
+// Non member //
+////////////////
+
+bool		Game::isClosestHero(const Entity& hero, const Position& pos)
+{
+	Entity	closest;
+	size_t	closest_dist = 420691337;
+
+	for (vectity::iterator i = heroes.begin(); i != heroes.end(); ++i) {
+		if (distance(i->pos, pos) < closest_dist) {
+			closest = *i;
+			closest_dist = distance(i->pos, pos);
+		}
+	}
+	return (closest.id == hero.id);
+}
+
+Entity		Game::getClosestDangerousEntity(const Entity& cur)
+{
+	Entity closest;
+	size_t closest_dist = 420691337;
+
+	for (vectity::iterator i = monsters.begin(); i != monsters.end(); ++i) {
+		if (this->isClosestHero(cur, i->pos)) {
+			if (distance(base, i->pos) < closest_dist) {
+				closest_dist = distance(base, i->pos);
+				closest = *i;
+			}
+		}
+	}
+	return closest;
 }
 
 ///////////
 // Logic //
 ///////////
 
-	std::string Game::generateAction(const Entity& hero) {
-		return move(hero.default_pos);
+std::string	Game::defensiveStrat(const Entity& hero)
+{
+	if (monsters.size() > 0) {
+		Entity danger = getClosestDangerousEntity(hero);
+		if (danger.isCloseToPos(base) == true) {
+			// use wind
+			if (danger.isInWindRange(hero.pos) && mana > 10 && danger.shield_life == 0)
+				return windy_day(center);
+			else
+				return move(danger.nextPos()) + " next_pos?";
+		}
+		else
+			return move(danger.nextPos()) + " pos++;";
 	}
+	else
+		return hero.moveDefaultPos() + " default?";
+}
+
+std::string Game::generateAction(const Entity& hero)
+{
+	// if (base_health > enemy_health) {
+		return this->defensiveStrat(hero);
+	// }
+	// else {
+	// 	if (round_nb < 30)
+	// 		this->farming_strat();
+	// 	else if ()
+	// }
+}
 
 /*-- File: src/Game.cpp end --*/
 /*-- File: src/Position.cpp start --*/

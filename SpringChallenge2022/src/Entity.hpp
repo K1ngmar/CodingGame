@@ -4,6 +4,13 @@
 #include "Position.hpp"
 #include <istream>
 
+static const Position base_positions[] = {
+	{0,0},
+	{17630, 9000}
+};
+
+static const Position center = {8900, 4500};
+
 struct Entity
 {
 ///////////
@@ -27,7 +34,8 @@ struct Entity
 ///////////////
 
 	int			id;
-	Position	default_pos; // only set for heroes
+	bool		is_attacker;
+	Position	default_pos;
 	Type		type;
 	Position	pos;
 	int 		shield_life;
@@ -36,12 +44,6 @@ struct Entity
 	Position	trajectory;
 	int			is_targeting;
 	Target		target;
-
-//////////////////
-// Construction //
-//////////////////
-
-	Entity();
 
 /////////////
 // Helpful //
@@ -53,6 +55,8 @@ public:
 	bool	isInWindRange(const Position& pos) const;
 	
 	Position	nextPos() const;
+
+	std::string	moveDefaultPos() const;
 
 }; /* end of Entity class */
 

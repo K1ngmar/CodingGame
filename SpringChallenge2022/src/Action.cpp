@@ -2,7 +2,7 @@
 #include "Action.hpp"
 
 std::string	move(const Position& pos) {
-	return "MOVE " + std::to_string(pos.x) + " " + std::to_string(pos.y) + " Moving";
+	return "MOVE " + std::to_string(pos.x) + " " + std::to_string(pos.y);
 }
 
 std::string	windy_day(const Position& pos) {

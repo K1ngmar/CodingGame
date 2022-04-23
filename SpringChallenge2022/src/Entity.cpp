@@ -1,5 +1,6 @@
 
 #include "Entity.hpp"
+#include "Action.hpp"
 #include <iostream>
 
 ///////////////
@@ -20,26 +21,6 @@ std::istream& operator >> (std::istream& is, Entity::Target& target) {
 	return is;
 }
 
-//////////////////
-// Construction //
-//////////////////
-
-Entity::Entity()
-{
-	std::cin >> this->id \
-	>> this->type \
-	>> this->pos.x \
-	>> this->pos.y \
-	>> this->shield_life \
-	>> this->is_controlled \
-	>> this->health \
-	>> this->trajectory.x \
-	>> this->trajectory.y \
-	>> this->is_targeting \
-	>> this->target;
-	std::cin.ignore();
-}
-
 /////////////
 // Helpful //
 /////////////
@@ -57,6 +38,16 @@ bool	Entity::isInWindRange(const Position& pos) const {
 }
 
 Position	Entity::nextPos() const {
-	return {this->pos.x + this->trajectory.x,
-			this->pos.y + this->trajectory.y};
+	Position ret;
+	std::cerr << "x: " << this->trajectory.x << ", y: " << this->trajectory.y << std::endl;
+	ret.x = this->pos.x + this->trajectory.x;
+	ret.y = this->pos.y + this->trajectory.y;
+	return ret;
+}
+
+std::string	Entity::moveDefaultPos() const
+{
+	if (this->is_attacker == true)
+		return move(center);
+	return move(this->default_pos);
 }

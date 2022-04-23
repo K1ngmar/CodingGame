@@ -3,17 +3,19 @@
 #include "action.hpp"
 #include <iostream>
 
-const Position Game::default_hero_pos[] = {
-	{5000, 800},
+#define DEBUG 1
+
+#if DEBUG == 1
+    #define TRACE() dprintf(2, "%s:%d\n", __FUNCTION__,  __LINE__)
+#else
+    #define TRACE()
+#endif
+
+static const Position default_hero_pos[] = {
+	{5000, 2000},
 	{3500, 3500},
 	{1500, 5000},
 };
-
-static const Position base_positions[] = {
-	{0,0},
-	{17630, 9000}
-};
-
 
 //////////////////
 // Construction //
@@ -50,8 +52,9 @@ Game::Game(): round_nb(0)
 			case Entity::MONSTER:
 				monsters.push_back(entity); break;
 			case Entity::HERO:
+				entity.is_attacker = heroes.size() == 1;
+				entity.default_pos = default_hero_pos[heroes.size()];
 				heroes.push_back(entity);
-				heroes[heroes.size() - 1].default_pos = default_hero_pos[heroes.size() - 1];
 				break;
 			case Entity::OPPONENT:
 				opponents.push_back(entity); break;
@@ -73,15 +76,90 @@ void Game::parseRound()
 	for (int i = 0; i < entity_count; ++i)
 	{
 		Entity	entity;
+		std::cin >> entity.id \
+		>> entity.type \
+		>> entity.pos.x \
+		>> entity.pos.y \
+		>> entity.shield_life \
+		>> entity.is_controlled \
+		>> entity.health \
+		>> entity.trajectory.x \
+		>> entity.trajectory.y \
+		>> entity.is_targeting \
+		>> entity.target;
+		std::cin.ignore();
+		entity.is_attacker = false;
+		entity.default_pos = {center};
 
 		this->setEntity(entity);
 	}
+	++round_nb;
+}
+
+////////////////
+// Non member //
+////////////////
+
+bool		Game::isClosestHero(const Entity& hero, const Position& pos)
+{
+	Entity	closest;
+	size_t	closest_dist = 420691337;
+
+	for (vectity::iterator i = heroes.begin(); i != heroes.end(); ++i) {
+		if (distance(i->pos, pos) < closest_dist) {
+			closest = *i;
+			closest_dist = distance(i->pos, pos);
+		}
+	}
+	return (closest.id == hero.id);
+}
+
+Entity		Game::getClosestDangerousEntity(const Entity& cur)
+{
+	Entity closest;
+	size_t closest_dist = 420691337;
+
+	for (vectity::iterator i = monsters.begin(); i != monsters.end(); ++i) {
+		if (this->isClosestHero(cur, i->pos)) {
+			if (distance(base, i->pos) < closest_dist) {
+				closest_dist = distance(base, i->pos);
+				closest = *i;
+			}
+		}
+	}
+	return closest;
 }
 
 ///////////
 // Logic //
 ///////////
 
-	std::string Game::generateAction(const Entity& hero) {
-		return move(hero.default_pos);
+std::string	Game::defensiveStrat(const Entity& hero)
+{
+	if (monsters.size() > 0) {
+		Entity danger = getClosestDangerousEntity(hero);
+		if (danger.isCloseToPos(base) == true) {
+			// use wind
+			if (danger.isInWindRange(hero.pos) && mana > 10 && danger.shield_life == 0)
+				return windy_day(center);
+			else
+				return move(danger.nextPos()) + " next_pos?";
+		}
+		else
+			return move(danger.nextPos()) + " pos++;";
 	}
+	else
+		return hero.moveDefaultPos() + " default?";
+}
+
+std::string Game::generateAction(const Entity& hero)
+{
+	// if (base_health > enemy_health) {
+		return this->defensiveStrat(hero);
+	// }
+	// else {
+	// 	if (round_nb < 30)
+	// 		this->farming_strat();
+	// 	else if ()
+	// }
+}
