@@ -1,0 +1,3 @@
+[submodule "cg-cpp-bundler"]
+	path = cg-cpp-bundler
+	url = https://github.com/MarcosCosmos/cg-cpp-bundler.git
