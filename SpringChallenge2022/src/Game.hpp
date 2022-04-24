@@ -71,6 +71,7 @@ class Game
 		// bool isClosestTarget(const Entity& hero);
 		bool isClosestHero(int id, Position& pos) const;
 		bool annoyingEnemy(const Entity& target) const;
+		Entity getAnnoyingEnemy(const Entity& target) const;
 
 	///////////
 	// Logic //

@@ -171,6 +171,7 @@ class Game
 		// bool isClosestTarget(const Entity& hero);
 		bool isClosestHero(int id, Position& pos) const;
 		bool annoyingEnemy(const Entity& target) const;
+		Entity getAnnoyingEnemy(const Entity& target) const;
 
 	///////////
 	// Logic //
@@ -331,10 +332,18 @@ std::string	Entity::moveDefaultPos() const
     #define TRACE()
 #endif
 
-static const Position default_hero_pos[] = {
+static const Position *default_hero_pos;
+	
+static const Position default_left_pos[3] = {
 	{5000, 1000},
 	{3500, 3000},
 	{1500, 5000},
+};
+
+static const Position default_right_pos[3] = {
+	{16000, 4000},
+	{14000, 5500},
+	{13000, 8000},
 };
 
 static const Position base_positions[] = {
@@ -350,10 +359,14 @@ Game::Game(): round_nb(0)
 {
 	int dont_need_this_but_has_to_be_read_otherwise_things_will_go_wrong;
 	std::cin >> base.x >> base.y; std::cin.ignore();
-	if (base == base_positions[0])
+	if (base == base_positions[0]) {
+		default_hero_pos = default_left_pos;
 		enemy_base = base_positions[1];
-	else
+	}
+	else {
+		default_hero_pos = default_right_pos;
 		enemy_base = base_positions[0];
+	}
 	std::cin >> dont_need_this_but_has_to_be_read_otherwise_things_will_go_wrong; std::cin.ignore();
 }
 
@@ -450,15 +463,23 @@ bool	Game::isClosestHero(int hero_id, Position& pos) const
 
 bool Game::annoyingEnemy(const Entity& target) const
 {
-	std::cerr << "checking for annoying enemy..." << std::endl;
 	for (const Entity& enemy: opponents) {
-		std::cerr << "checkin..." << std::endl;
-		if (target.isInSpellRange(enemy.nextPos()) == true) {
-			std::cerr << "BRO WTF" << std::endl;
+		if (target.isInSpellRange(enemy.pos) == true || target.isInSpellRange(enemy.nextPos()) == true) {
 			return true;
 		}
 	}
 	return false;
+}
+
+Entity Game::getAnnoyingEnemy(const Entity& target) const
+{
+	for (const Entity& enemy: opponents) {
+		if (target.isInSpellRange(enemy.pos) == true || target.isInSpellRange(enemy.nextPos()) == true) {
+			return enemy;
+		}
+	}
+	std::cerr << "this should not happen" << std::endl;
+	return target;
 }
 
 ///////////
@@ -470,7 +491,11 @@ Entity Game::getBestDefendingTarget(const Entity& hero)
 	dm::iterator itr = monsters.begin();
 
 	while (itr != monsters.end() && itr->second.targeting == Entity::BASE) {
-		if (((active_targets.find(itr->second.id) == active_targets.end()) || distance(itr->second.pos, hero.pos) < 800) && isClosestHero(hero.id, itr->second.pos) == true)
+		if ((active_targets.find(itr->second.id) == active_targets.end())) {
+			if (isClosestHero(hero.id, itr->second.pos) == true || (itr->second.isCloseToPos(base) && itr->second.shield_life > 0))
+				return (itr->second);
+		}
+		if (distance(itr->second.pos, hero.pos) < 2000 && distance(itr->second.pos, base) < 4500)
 			return (itr->second);
 		++itr;
 	}
@@ -483,14 +508,27 @@ Entity Game::getBestDefendingTarget(const Entity& hero)
 
 std::string	Game::defensiveStrat(const Entity& hero)
 {
+	if (annoyingEnemy(hero) == true && mana > 10) {
+		Entity enemy = getAnnoyingEnemy(hero);
+
+		if (distance(enemy.nextPos(), enemy.pos) < 800)
+			return control(enemy.id, enemy_base);
+		if (enemy.shield_life == 0)
+			return windy_day(center);
+		else if (hero.shield_life == 0)
+			return shield(hero.id);
+	}
+	// if an enemy is attacking but is not in range
+	if (hero.is_attacker == true && opponents.size() > 0 && hero.isInSpellRange(opponents[0].pos) == false)
+		return move(opponents[0].pos);
 	if (monsters.size() > 0) {
 		Entity target = getBestDefendingTarget(hero);
 
 		if (monsters.size() > 2 || active_targets.find(target.id) == active_targets.end()) {
 			active_targets.insert(target.id);
-			if (target.shield_life == 0 && target.isCloseToPos(base) && annoyingEnemy(target) == true && mana > 10)
-				return shield(target.id);
-			if (target.shield_life == 0 && target.isCloseToPos(base) && target.isInWindRange(hero.pos) && mana > 10)
+			if (distance(target.pos, base) < 4500 && target.shield_life == 0 && mana > 10)
+				return windy_day(center);
+			if (target.shield_life == 0 && target.isCloseToPos(base) && target.isInWindRange(hero.pos) && mana > 10 && round_nb > 40)
 				return windy_day(center);
 			if (target.movingToPos(base) == true)
 				return move(target.pos);
@@ -528,7 +566,8 @@ std::string Game::generateAction(const Entity& hero)
 ////////////////
 
 	size_t		distance(const Position& h, const Position& e) {
-		return (abs(h.x - e.x) + abs(h.y - e.y));
+		//((x1 - x2)^2 + (y1 - y2)^2)^0.5
+		return ceil(pow((pow(h.x - e.x, 2) + pow(h.y - e.y, 2)), 0.5));
 	}
 
 /*-- File: src/Position.cpp end --*/
