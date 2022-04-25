@@ -26,7 +26,15 @@ std::istream& operator >> (std::istream& is, Entity::Target& target) {
 /////////////
 
 bool	Entity::isCloseToPos(const Position& pos) const {
-	return (distance(pos, this->pos) <= 6000);
+	return (distance(pos, this->pos) <= 4000);
+}
+
+bool	Entity::isInRange6000(const Position& pos) const {
+	return distance(pos, this->pos) <= 6000;
+}
+
+bool	Entity::isInRange7500(const Position& pos) const {
+	return distance(pos, this->pos) <= 7500;
 }
 
 bool	Entity::isInSpellRange(const Position& pos) const {

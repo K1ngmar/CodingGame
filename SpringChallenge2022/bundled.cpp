@@ -84,6 +84,10 @@ struct Entity
 public:
 
 	bool	isCloseToPos(const Position& pos) const;
+	bool	isInRange6000(const Position& pos) const;
+	bool	isInRange7500(const Position& pos) const;
+
+
 	bool	isInSpellRange(const Position& pos) const;
 	bool	isInWindRange(const Position& pos) const;
 
@@ -232,11 +236,11 @@ std::string	move(const Position& pos) {
 }
 
 std::string	windy_day(const Position& pos) {
-	return "SPELL WIND " + std::to_string(pos.x) + " " + std::to_string(pos.y) + " ITS WINDY OUT HERE";
+	return "SPELL WIND " + std::to_string(pos.x) + " " + std::to_string(pos.y);
 }
 
 std::string	shield(const int id) {
-	return "SPELL SHIELD " + std::to_string(id) + " PROTECC";
+	return "SPELL SHIELD " + std::to_string(id);
 }
 
 std::string	control(const int id, const Position& pos) {
@@ -275,7 +279,15 @@ std::istream& operator >> (std::istream& is, Entity::Target& target) {
 /////////////
 
 bool	Entity::isCloseToPos(const Position& pos) const {
-	return (distance(pos, this->pos) <= 6000);
+	return (distance(pos, this->pos) <= 4000);
+}
+
+bool	Entity::isInRange6000(const Position& pos) const {
+	return distance(pos, this->pos) <= 6000;
+}
+
+bool	Entity::isInRange7500(const Position& pos) const {
+	return distance(pos, this->pos) <= 7500;
 }
 
 bool	Entity::isInSpellRange(const Position& pos) const {
@@ -335,15 +347,15 @@ std::string	Entity::moveDefaultPos() const
 static const Position *default_hero_pos;
 	
 static const Position default_left_pos[3] = {
-	{5000, 1000},
-	{3500, 3000},
-	{1500, 5000},
+	{6000, 1500},
+	{3000, 5000},
+	{12000, 5000}, // attacker
 };
 
 static const Position default_right_pos[3] = {
-	{16000, 4000},
-	{14000, 5500},
-	{13000, 8000},
+	{15000, 3000},
+	{11500, 6500},
+	{5500, 3500}, // attacker
 };
 
 static const Position base_positions[] = {
@@ -391,7 +403,7 @@ Game::Game(): round_nb(0)
 			case Entity::MONSTER:
 				monsters[distance(base, entity.pos)] = entity; break;
 			case Entity::HERO:
-				entity.is_attacker = heroes.size() == 1;
+				entity.is_attacker = heroes.size() == 2;
 				entity.default_pos = default_hero_pos[heroes.size()];
 				heroes.push_back(entity);
 				break;
@@ -495,8 +507,6 @@ Entity Game::getBestDefendingTarget(const Entity& hero)
 			if (isClosestHero(hero.id, itr->second.pos) == true || (itr->second.isCloseToPos(base) && itr->second.shield_life > 0))
 				return (itr->second);
 		}
-		if (distance(itr->second.pos, hero.pos) < 2000 && distance(itr->second.pos, base) < 4500)
-			return (itr->second);
 		++itr;
 	}
 	return hero.targets.begin()->second;
@@ -508,43 +518,25 @@ Entity Game::getBestDefendingTarget(const Entity& hero)
 
 std::string	Game::defensiveStrat(const Entity& hero)
 {
-	if (annoyingEnemy(hero) == true && mana > 10) {
-		Entity enemy = getAnnoyingEnemy(hero);
+	Entity target = getBestDefendingTarget(hero);
 
-		if (distance(enemy.nextPos(), enemy.pos) < 800)
-			return control(enemy.id, enemy_base);
-		if (enemy.shield_life == 0)
-			return windy_day(center);
-		else if (hero.shield_life == 0)
-			return shield(hero.id);
-	}
-	// if an enemy is attacking but is not in range
-	if (hero.is_attacker == true && opponents.size() > 0 && hero.isInSpellRange(opponents[0].pos) == false)
-		return move(opponents[0].pos);
 	if (monsters.size() > 0) {
-		Entity target = getBestDefendingTarget(hero);
-
-		if (monsters.size() > 2 || active_targets.find(target.id) == active_targets.end()) {
-			active_targets.insert(target.id);
-			if (distance(target.pos, base) < 4500 && target.shield_life == 0 && mana > 10)
-				return windy_day(center);
-			if (target.shield_life == 0 && target.isCloseToPos(base) && target.isInWindRange(hero.pos) && mana > 10 && round_nb > 40)
-				return windy_day(center);
-			if (target.movingToPos(base) == true)
-				return move(target.pos);
-		}
+		if (target.isInRange7500(base) == true)
+			return move(target.pos);
 	}
-	return hero.moveDefaultPos();
+	return move(hero.default_pos);
 }
 
 std::string Game::attackingStrat(const Entity& hero)
 {
-
+	return move(hero.default_pos);
 }
 
 std::string Game::generateAction(const Entity& hero)
 {
-	return this->defensiveStrat(hero);
+	if (hero.is_attacker == true)
+		return attackingStrat(hero);
+	return defensiveStrat(hero);
 }
 
 /*-- File: src/Game.cpp end --*/

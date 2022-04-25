@@ -6,11 +6,11 @@ std::string	move(const Position& pos) {
 }
 
 std::string	windy_day(const Position& pos) {
-	return "SPELL WIND " + std::to_string(pos.x) + " " + std::to_string(pos.y) + " ITS WINDY OUT HERE";
+	return "SPELL WIND " + std::to_string(pos.x) + " " + std::to_string(pos.y);
 }
 
 std::string	shield(const int id) {
-	return "SPELL SHIELD " + std::to_string(id) + " PROTECC";
+	return "SPELL SHIELD " + std::to_string(id);
 }
 
 std::string	control(const int id, const Position& pos) {

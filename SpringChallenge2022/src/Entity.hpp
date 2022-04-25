@@ -50,6 +50,10 @@ struct Entity
 public:
 
 	bool	isCloseToPos(const Position& pos) const;
+	bool	isInRange6000(const Position& pos) const;
+	bool	isInRange7500(const Position& pos) const;
+
+
 	bool	isInSpellRange(const Position& pos) const;
 	bool	isInWindRange(const Position& pos) const;
 
