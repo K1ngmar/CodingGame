@@ -59,34 +59,36 @@ struct Entity
 		ENEMY
 	};
 
-	typedef std::map<size_t, Entity>	dist_map;
+	typedef std::map<size_t, Entity> threat_map;
 
 ///////////////
 // Variables //
 ///////////////
 
 	int			id;
-	bool		is_attacker;
-	Position	default_pos;
 	Type		type;
 	Position	pos;
 	int 		shield_life;
 	int 		is_controlled;
 	int			health;
 	Position	trajectory;
-	int			is_targeting;
+	int			near_base;
 	Target		targeting;
-	dist_map	targets;
+
+	Position	default_pos;
+	threat_map	threats;
+
+	bool		is_attacker;
+	Entity*		current_target;
 
 /////////////
 // Helpful //
 /////////////
 public:
 
-	bool	isCloseToPos(const Position& pos) const;
+	bool	isInRange5000(const Position& pos) const;
 	bool	isInRange6000(const Position& pos) const;
 	bool	isInRange7500(const Position& pos) const;
-
 
 	bool	isInSpellRange(const Position& pos) const;
 	bool	isInWindRange(const Position& pos) const;
@@ -95,13 +97,15 @@ public:
 
 	Position	nextPos() const;
 
-	std::string	moveDefaultPos() const;
+	Position	idle() const;
 
 }; /* end of Entity class */
 
 ///////////////
 // Operators //
 ///////////////
+
+	bool operator == (const Entity& lhs, const Entity& rhs);
 
 	std::istream& operator >> (std::istream& is, const Entity::Type& type);
 	std::istream& operator >> (std::istream& is, const Entity::Target& target);
@@ -110,19 +114,33 @@ public:
 #include <vector>
 #include <set>
 
+static const Position *default_hero_pos;
+	
+static const Position default_left_pos[3] = {
+	{6000, 1500},
+	{3000, 5000},
+	{12000, 5000}, // attacker
+};
+
+static const Position default_right_pos[3] = {
+	{15000, 3000},
+	{11500, 6500},
+	{5500, 3500}, // attacker
+};
+
+static const Position base_positions[] = {
+	{0,0},
+	{17630, 9000}
+};
+
 //////////
 // Game //
 //////////
 class Game
 {
-	//////////////
-	// Typedefs //
-	//////////////
-	public:
-
-		typedef std::vector<Entity>			vectity;
-		typedef std::set<int>				target_map;
-		typedef std::map<size_t, Entity>	dm;
+	typedef std::vector<Entity>			evec;
+	typedef std::map<size_t, Entity>	threat_map;
+	typedef std::set<int>				atarget;	
 
 	//////////////////////
 	// Member variables //
@@ -135,11 +153,12 @@ class Game
 		int			enemy_health;
 		int 		mana;
 		int			enemy_mana;
-		vectity		heroes;
-		vectity		opponents;
-		dm			monsters;
-		size_t		round_nb;
-		target_map	active_targets;
+		int			round;
+
+		evec		heroes;
+		evec		enemies;
+		threat_map	monsters;
+		atarget		active_targets;
 		
 
 	//////////////////
@@ -159,12 +178,11 @@ class Game
 	///////////////////
 	private:
 
-		void	clearEntities();
 		void	setEntity(Entity& entity);
+		void	createDangerMap(Entity& entity);
 
 	public:
 
-		void	createDistMap();
 		void	parseRound();
 
 	/////////////
@@ -172,17 +190,15 @@ class Game
 	/////////////
 	public:
 
-		// bool isClosestTarget(const Entity& hero);
-		bool isClosestHero(int id, Position& pos) const;
-		bool annoyingEnemy(const Entity& target) const;
-		Entity getAnnoyingEnemy(const Entity& target) const;
+		bool isClosestHero(int id, const Position& pos) const;
+		bool isClosestHero(const Entity& hero, const Entity& entity) const;
+		bool isActiveTarget(const Entity& monster) const;
 
 	///////////
 	// Logic //
 	///////////
 	public:
 
-		Entity		getBestDefendingTarget(const Entity& hero);
 		std::string generateAction(const Entity& hero);
 
 	/////////////////
@@ -192,6 +208,18 @@ class Game
 
 		std::string	defensiveStrat(const Entity& hero);
 		std::string	attackingStrat(const Entity& hero);
+
+	//////////////
+	// Actiones //
+	//////////////
+	public:
+
+		std::string	move(const Position& pos);
+		std::string	windy_day(const Position& pos);
+
+		std::string	shield(const int id);
+
+		std::string	control(const int id, const Position& pos = center);
 
 };
 
@@ -215,50 +243,19 @@ int main()
 }
 
 /*-- File: src/main.cpp end --*/
-/*-- File: src/Action.cpp start --*/
-
-/*-- #include "src/Action.hpp" start --*/
-
-
-/*-- #include "src/Position.hpp" start --*/
-/*-- #include "src/Position.hpp" end --*/
-#include <string>
-
-	std::string	move(const Position& pos);
-	std::string	windy_day(const Position& pos);
-	std::string	shield(const int id);
-	std::string	control(const int id, const Position& pos);
-
-/*-- #include "src/Action.hpp" end --*/
-
-std::string	move(const Position& pos) {
-	return "MOVE " + std::to_string(pos.x) + " " + std::to_string(pos.y);
-}
-
-std::string	windy_day(const Position& pos) {
-	return "SPELL WIND " + std::to_string(pos.x) + " " + std::to_string(pos.y);
-}
-
-std::string	shield(const int id) {
-	return "SPELL SHIELD " + std::to_string(id);
-}
-
-std::string	control(const int id, const Position& pos) {
-	return "SPELL CONTROL " + std::to_string(id) + " " + std::to_string(pos.x) + " " + std::to_string(pos.y) + " CONTROLAAAA";
-}
-
-/*-- File: src/Action.cpp end --*/
 /*-- File: src/Entity.cpp start --*/
 
 /*-- #include "src/Entity.hpp" start --*/
 /*-- #include "src/Entity.hpp" end --*/
-/*-- #include "src/Action.hpp" start --*/
-/*-- #include "src/Action.hpp" end --*/
 #include <iostream>
 
 ///////////////
 // Operators //
 ///////////////
+
+bool operator == (const Entity& lhs, const Entity& rhs) {
+	return lhs.id == rhs.id;
+}
 
 std::istream& operator >> (std::istream& is, Entity::Type& type) {
 	int _type;
@@ -278,8 +275,8 @@ std::istream& operator >> (std::istream& is, Entity::Target& target) {
 // Helpful //
 /////////////
 
-bool	Entity::isCloseToPos(const Position& pos) const {
-	return (distance(pos, this->pos) <= 4000);
+bool	Entity::isInRange5000(const Position& pos) const {
+	return (distance(pos, this->pos) <= 5000);
 }
 
 bool	Entity::isInRange6000(const Position& pos) const {
@@ -309,11 +306,12 @@ Position	Entity::nextPos() const {
 	return ret;
 }
 
-std::string	Entity::moveDefaultPos() const
-{
-	// if (this->is_attacker == true)
-	// 	return move(center);
-	return move(this->default_pos);
+Position	Entity::idle() const {
+	if (distance(pos, default_pos) > 800)
+		return default_pos;
+	int x = 800 * ((rand() % 2) ? 1 : -1);
+	int y = 800 * ((rand() % 2) ? 1 : -1);
+	return {pos.x + x, pos.y + y};
 }
 
 /*-- File: src/Entity.cpp end --*/
@@ -321,19 +319,6 @@ std::string	Entity::moveDefaultPos() const
 
 /*-- #include "src/Game.hpp" start --*/
 /*-- #include "src/Game.hpp" end --*/
-/*-- #include "src/action.hpp" start --*/
-
-
-/*-- #include "src/Position.hpp" start --*/
-/*-- #include "src/Position.hpp" end --*/
-#include <string>
-
-	std::string	move(const Position& pos);
-	std::string	windy_day(const Position& pos);
-	std::string	shield(const int id);
-	std::string	control(const int id, const Position& pos);
-
-/*-- #include "src/action.hpp" end --*/
 #include <iostream>
 
 #define DEBUG 1
@@ -344,30 +329,11 @@ std::string	Entity::moveDefaultPos() const
     #define TRACE()
 #endif
 
-static const Position *default_hero_pos;
-	
-static const Position default_left_pos[3] = {
-	{6000, 1500},
-	{3000, 5000},
-	{12000, 5000}, // attacker
-};
-
-static const Position default_right_pos[3] = {
-	{15000, 3000},
-	{11500, 6500},
-	{5500, 3500}, // attacker
-};
-
-static const Position base_positions[] = {
-	{0,0},
-	{17630, 9000}
-};
-
 //////////////////
 // Construction //
 //////////////////
 
-Game::Game(): round_nb(0)
+Game::Game(): round(0)
 {
 	int dont_need_this_but_has_to_be_read_otherwise_things_will_go_wrong;
 	std::cin >> base.x >> base.y; std::cin.ignore();
@@ -388,38 +354,30 @@ Game::Game(): round_nb(0)
 
 // private
 
-	void Game::clearEntities()
-	{
-		heroes.clear();
-		monsters.clear();
-		opponents.clear();
-		active_targets.clear();
-	}
-
 	void Game::setEntity(Entity& entity)
 	{
 		switch(entity.type)
 		{
 			case Entity::MONSTER:
-				monsters[distance(base, entity.pos)] = entity; break;
+				monsters[distance(entity.pos, base)] = entity;
+				break ;
 			case Entity::HERO:
-				entity.is_attacker = heroes.size() == 2;
 				entity.default_pos = default_hero_pos[heroes.size()];
 				heroes.push_back(entity);
-				break;
+				break ;
 			case Entity::OPPONENT:
-				opponents.push_back(entity); break;
+				enemies.push_back(entity);
+				break ;
 		}
 	}
 
-// public
-
-void Game::createDistMap()
+void	Game::createDangerMap(Entity& hero)
 {
-	for (Entity& hero: heroes)
-		for (auto monster: monsters)
-			hero.targets[distance(hero.pos, monster.second.pos)] = monster.second;
+	for (auto monster: monsters)
+		hero.threats[distance(monster.second.pos, hero.pos)] = monster.second;
 }
+
+// public
 
 void Game::parseRound()
 {
@@ -430,11 +388,15 @@ void Game::parseRound()
 		
 	std::cin >> entity_count; std::cin.ignore();
 
-	this->clearEntities();
+	monsters.clear();
+	heroes.clear();
+	enemies.clear();
+	active_targets.clear();
 	for (int i = 0; i < entity_count; ++i)
 	{
 		Entity	entity;
-		std::cin >> entity.id \
+		std::cin \ 
+		>> entity.id \
 		>> entity.type \
 		>> entity.pos.x \
 		>> entity.pos.y \
@@ -443,7 +405,7 @@ void Game::parseRound()
 		>> entity.health \
 		>> entity.trajectory.x \
 		>> entity.trajectory.y \
-		>> entity.is_targeting \
+		>> entity.near_base \
 		>> entity.targeting;
 		std::cin.ignore();
 		entity.is_attacker = false;
@@ -451,18 +413,19 @@ void Game::parseRound()
 
 		this->setEntity(entity);
 	}
-	createDistMap();
-	++round_nb;
+	for (Entity& hero: heroes)
+		createDangerMap(hero);
+	++round;
 }
 
 /////////////
 // Helpers //
 /////////////
 
-bool	Game::isClosestHero(int hero_id, Position& pos) const
+bool	Game::isClosestHero(int hero_id, const Position& pos) const
 {
 	size_t	dist = 420691337;
-	int		id = hero_id;
+	int		id;
 
 	for (const Entity& hero: heroes) {
 		if (distance(hero.pos, pos) < dist) {
@@ -473,44 +436,21 @@ bool	Game::isClosestHero(int hero_id, Position& pos) const
 	return (hero_id == id);
 }
 
-bool Game::annoyingEnemy(const Entity& target) const
+bool	Game::isClosestHero(const Entity& hero, const Entity& entity) const
 {
-	for (const Entity& enemy: opponents) {
-		if (target.isInSpellRange(enemy.pos) == true || target.isInSpellRange(enemy.nextPos()) == true) {
-			return true;
-		}
-	}
-	return false;
+	return isClosestHero(hero.id, entity.pos);
 }
 
-Entity Game::getAnnoyingEnemy(const Entity& target) const
+bool	Game::isActiveTarget(const Entity& monster) const
 {
-	for (const Entity& enemy: opponents) {
-		if (target.isInSpellRange(enemy.pos) == true || target.isInSpellRange(enemy.nextPos()) == true) {
-			return enemy;
-		}
-	}
-	std::cerr << "this should not happen" << std::endl;
-	return target;
+	return active_targets.find(monster.id) != active_targets.end();
 }
 
 ///////////
 // Logic //
 ///////////
 
-Entity Game::getBestDefendingTarget(const Entity& hero)
-{
-	dm::iterator itr = monsters.begin();
 
-	while (itr != monsters.end() && itr->second.targeting == Entity::BASE) {
-		if ((active_targets.find(itr->second.id) == active_targets.end())) {
-			if (isClosestHero(hero.id, itr->second.pos) == true || (itr->second.isCloseToPos(base) && itr->second.shield_life > 0))
-				return (itr->second);
-		}
-		++itr;
-	}
-	return hero.targets.begin()->second;
-}
 
 ////////////////
 // Strategies //
@@ -518,18 +458,20 @@ Entity Game::getBestDefendingTarget(const Entity& hero)
 
 std::string	Game::defensiveStrat(const Entity& hero)
 {
-	Entity target = getBestDefendingTarget(hero);
-
-	if (monsters.size() > 0) {
-		if (target.isInRange7500(base) == true)
-			return move(target.pos);
+	if (monsters.size() > 0 && distance(hero.pos, base) < 9500) {
+		for (auto& mp: hero.threats) {
+			if (isActiveTarget(mp.second) == false) {
+				active_targets.insert(mp.second.id);
+				return move(mp.second.pos) + " DEFENSE";
+			}
+		}
 	}
-	return move(hero.default_pos);
+	return move(hero.idle()) + " idle";
 }
 
 std::string Game::attackingStrat(const Entity& hero)
 {
-	return move(hero.default_pos);
+	return move(hero.idle()) + " idle";
 }
 
 std::string Game::generateAction(const Entity& hero)
@@ -537,6 +479,31 @@ std::string Game::generateAction(const Entity& hero)
 	if (hero.is_attacker == true)
 		return attackingStrat(hero);
 	return defensiveStrat(hero);
+}
+
+//////////////
+// ACTIONES //
+//////////////
+
+std::string	Game::move(const Position& pos) {
+	return "MOVE " + std::to_string(pos.x) + " " + std::to_string(pos.y);
+}
+
+std::string	Game::windy_day(const Position& pos) {
+	mana -= 10;
+	return "SPELL WIND " + std::to_string(pos.x) + " " + std::to_string(pos.y);
+}
+
+std::string	Game::shield(const int id) {
+	mana -= 10;
+	return "SPELL SHIELD " + std::to_string(id);
+}
+
+std::string	Game::control(const int id, const Position& pos) {
+	mana -= 10;
+	int mod = rand() % 4500;
+	mod *= (rand() % 2) ? 1 : -1;
+	return "SPELL CONTROL " + std::to_string(id) + " " + std::to_string(pos.x) + " " + std::to_string(pos.y + mod);
 }
 
 /*-- File: src/Game.cpp end --*/

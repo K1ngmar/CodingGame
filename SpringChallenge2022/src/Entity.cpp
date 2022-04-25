@@ -1,32 +1,36 @@
 
 #include "Entity.hpp"
-#include "Action.hpp"
 #include <iostream>
 
 ///////////////
 // Operators //
 ///////////////
 
-std::istream& operator >> (std::istream& is, Entity::Type& type) {
+std::istream& operator >> (std::istream& is, Type& type) {
 	int _type;
 	is >> _type;
-	type = static_cast<Entity::Type>(_type);
+	type = static_cast<Type>(_type);
 	return is;
 }
 
-std::istream& operator >> (std::istream& is, Entity::Target& target) {
+std::istream& operator >> (std::istream& is, Target& target) {
 	int _target;
 	is >> _target;
-	target = static_cast<Entity::Target>(_target);
+	target = static_cast<Target>(_target);
 	return is;
+}
+
+bool operator == (const Entity& lhs, const Entity& rhs)
+{
+	return (lhs.id == rhs.id);
 }
 
 /////////////
 // Helpful //
 /////////////
 
-bool	Entity::isCloseToPos(const Position& pos) const {
-	return (distance(pos, this->pos) <= 4000);
+bool	Entity::isInRange5000(const Position& pos) const {
+	return (distance(pos, this->pos) <= 5000);
 }
 
 bool	Entity::isInRange6000(const Position& pos) const {
@@ -54,11 +58,4 @@ Position	Entity::nextPos() const {
 	ret.x = this->pos.x + this->trajectory.x;
 	ret.y = this->pos.y + this->trajectory.y;
 	return ret;
-}
-
-std::string	Entity::moveDefaultPos() const
-{
-	// if (this->is_attacker == true)
-	// 	return move(center);
-	return move(this->default_pos);
 }

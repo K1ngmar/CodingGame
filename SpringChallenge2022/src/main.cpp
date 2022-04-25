@@ -7,6 +7,7 @@ int main()
 	Game		game;
 	std::string action;
 
+	game.init();
 	while(true)
 	{
 		game.parseRound();

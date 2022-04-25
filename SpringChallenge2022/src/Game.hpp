@@ -2,91 +2,39 @@
 #pragma once
 
 #include "Position.hpp"
-#include "Entity.hpp"
 #include <vector>
-#include <set>
 
-//////////
-// Game //
-//////////
-class Game
+struct Game
 {
-	//////////////
-	// Typedefs //
-	//////////////
-	public:
+// statitcs
 
-		typedef std::vector<Entity>			vectity;
-		typedef std::set<int>				target_map;
-		typedef std::map<size_t, Entity>	dm;
+	static const Position base_positions[];
+	static const Position center;
 
-	//////////////////////
-	// Member variables //
-	//////////////////////
-	public:
+// typedefs
 
-		Position	base;
-		int			base_health;
-		Position	enemy_base;
-		int			enemy_health;
-		int 		mana;
-		int			enemy_mana;
-		vectity		heroes;
-		vectity		opponents;
-		dm			monsters;
-		size_t		round_nb;
-		target_map	active_targets;
-		
+	typedef std::vector<Entity> vectity;
 
-	//////////////////
-	// Construction //
-	//////////////////
-	private:
+// variables
 
-		Game(const Game& x);
-		Game& operator = (const Game& x);
+	Position	base;
+	Position	enemy_base;
+	int			health;
+	int			enemy_health;
+	int			mana;
+	int			enemy_mana;
+	int			round;
 
-	public:
+	vectity		heroes;
+	vectity		monsters;
+	vectity		opponents;
 
-		Game();
+// construct
 
-	///////////////////
-	// Funky Members //
-	///////////////////
-	private:
+	Game();
 
-		void	clearEntities();
-		void	setEntity(Entity& entity);
-
-	public:
-
-		void	createDistMap();
-		void	parseRound();
-
-	/////////////
-	// Helpers //
-	/////////////
-	public:
-
-		// bool isClosestTarget(const Entity& hero);
-		bool isClosestHero(int id, Position& pos) const;
-		bool annoyingEnemy(const Entity& target) const;
-		Entity getAnnoyingEnemy(const Entity& target) const;
-
-	///////////
-	// Logic //
-	///////////
-	public:
-
-		Entity		getBestDefendingTarget(const Entity& hero);
-		std::string generateAction(const Entity& hero);
-
-	/////////////////
-	/// Strategies //
-	/////////////////
-	public:
-
-		std::string	defensiveStrat(const Entity& hero);
-		std::string	attackingStrat(const Entity& hero);
+	void	setEntity(Entity& entity);
+	void	update(Entity& entity);
+	void	init();
 
 };
