@@ -36,6 +36,7 @@ class Game
 		dm			monsters;
 		size_t		round_nb;
 		target_map	active_targets;
+		target_map	controlled_enemies;
 		
 
 	//////////////////
@@ -79,6 +80,7 @@ class Game
 	public:
 
 		Entity		getBestDefendingTarget(const Entity& hero);
+		Entity		getBestAttackingTarget(const Entity& hero);
 		std::string generateAction(const Entity& hero);
 
 	/////////////////
