@@ -140,7 +140,6 @@ class Game
 		dm			monsters;
 		size_t		round_nb;
 		target_map	active_targets;
-		target_map	controlled_enemies;
 		
 
 	//////////////////
@@ -184,7 +183,6 @@ class Game
 	public:
 
 		Entity		getBestDefendingTarget(const Entity& hero);
-		Entity		getBestAttackingTarget(const Entity& hero);
 		std::string generateAction(const Entity& hero);
 
 	/////////////////
@@ -514,24 +512,6 @@ Entity Game::getBestDefendingTarget(const Entity& hero)
 	return hero.targets.begin()->second;
 }
 
-Entity Game::getBestAttackingTarget(const Entity& hero)
-{
-	dm::const_iterator itr = hero.targets.begin();
-
-	while (itr != hero.targets.end()) {
-		if (controlled_enemies.find(itr->second.id) == controlled_enemies.end())
-			return (itr->second);
-		else if (itr->second.shield_life == 0)
-			return (itr->second);
-		else if (itr->second.movingToPos(base) == true)
-			return (itr->second);
-		++itr;
-	}
-	Entity none;
-	none.pos = hero.default_pos;
-	return none;
-}
-
 ////////////////
 // Strategies //
 ////////////////
@@ -541,42 +521,15 @@ std::string	Game::defensiveStrat(const Entity& hero)
 	Entity target = getBestDefendingTarget(hero);
 
 	if (monsters.size() > 0) {
-		// can use spell
-		if (mana > 10 && target.shield_life == 0) {
-			if (target.isCloseToPos(base) && target.isInWindRange(hero.pos))
-				return windy_day(center) + " MOVE!";
-			else if (target.isInRange6000(base) && round_nb > 50 && target.isInWindRange(hero.pos) && mana > 50)
-				return windy_day(center) + " WOOSH";
-		}
-		if (target.isInRange7500(base) && controlled_enemies.find(target.id) == controlled_enemies.end()) {
-			active_targets.insert(target.id);
-			return move(target.pos) + " CLEARING..";
-		}
-		else if (target.isInRange6000(base))
-			return move(target.pos) + " 6000";
+		if (target.isInRange7500(base) == true)
+			return move(target.pos);
 	}
-	return move(hero.default_pos) + " WAITING..";
+	return move(hero.default_pos);
 }
 
 std::string Game::attackingStrat(const Entity& hero)
 {
-	if (hero.targets.size() > 0) {
-		Entity target = getBestAttackingTarget(hero);
-
-		if (round_nb < 45)
-			return move(target.pos) + " COLLECTING";
-		if (mana > 30 && target.isInSpellRange(hero.pos)) {
-			if (controlled_enemies.find(target.id) == controlled_enemies.end()) {
-				controlled_enemies.insert(target.id);
-				return control(target.id, enemy_base);
-			}
-			else if (target.shield_life == 0)
-				return shield(target.id) + " PROTECC";
-		}
-		else if (target.shield_life == 0 && target.movingToPos(base) == true)
-			return move(target.pos) + " DEFENSE";
-	}
-	return move(hero.default_pos) + " ATTACKING";
+	return move(hero.default_pos);
 }
 
 std::string Game::generateAction(const Entity& hero)
