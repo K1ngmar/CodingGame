@@ -27,7 +27,7 @@ static const Position default_right[] = {
 
 // construction
 
-Game::Game() : round(0)
+Game::Game() : round(0), defender_amt(HERO_AMT)
 {
 	int useless;
 
@@ -74,6 +74,7 @@ void Game::setEntity(Entity& entity)
 	{
 		case HERO:
 			entity.default_pos = default_pos[heroes.size()];
+			entity.is_attacker = heroes.size() == 2;
 			heroes.push_back(entity); break ;
 		case OPPONENT:
 			opponents.push_back(entity); break ;
@@ -123,13 +124,17 @@ void	Game::parseRound()
 	this->clearEntities();
 	for (size_t i = 0; i < entity_count; ++i) {
 		Entity entity = readEntity();
-		// if (round == 0)
-			setEntity(entity);
-		// else
-		// 	update(entity);
+
+		setEntity(entity);
+		if (controlled.find(entity.id) != controlled.end()) {
+			if (entity.movingToPos(base))
+				controlled.erase(entity.id);
+		}
 	}
 	std::sort(monsters.begin(), monsters.end());
 	++round;
+	if (round > 100)
+		defender_amt = 2;
 }
 
 ///////////
@@ -145,69 +150,90 @@ void	Game::permutationNation()
 {
 	size_t		best_rating = 420691337;
 	size_t		rating;
-	permutePair tmp[3];
-	permutePair	best[3];
+	permutePair tmp[HERO_AMT];
+	permutePair	best[HERO_AMT];
 	Entity*		monster;
 
-	for (size_t offset = 0; offset < HERO_AMT; offset++) {
-		for (size_t j = 1; j < HERO_AMT; j++) {
+	for (size_t offset = 0; offset < defender_amt; offset++) {
+		for (size_t j = 1; j < defender_amt; j++) {
 			rating = 0;
-			for (size_t i = 0; i < HERO_AMT; i++) {
-				if ((i * j) % HERO_AMT > monsters.size())
+			for (size_t i = 0; i < defender_amt; i++) {
+				if ((i * j) % defender_amt > monsters.size())
 					monster = NULL;
 				else
-					monster = &(monsters[(i * j) % HERO_AMT]);
+					monster = &(monsters[(i * j) % defender_amt]);
 				tmp[i] = {
-						&(heroes[(i + offset) % HERO_AMT]),
+						&(heroes[(i + offset) % defender_amt]),
 						monster
 					};
 				if (monster)
 					rating += distance(tmp[i].hero->pos, monster->pos);
 			}
 			if (rating < best_rating) {
-				for (size_t i = 0; i < HERO_AMT; i++)
+				for (size_t i = 0; i < defender_amt; i++)
 					best[i] = {tmp[i].hero, tmp[i].target};
 			}
 		}
 	}
-	for (size_t i = 0; i < HERO_AMT; i++) {
+	for (size_t i = 0; i < defender_amt; i++) {
 		best[i].hero->current_target = best[i].target;
 	}
 }
 
-// bool	Game::stoopidAttack(Entity& hero)
-// {
-// 	if (monsters.size() > 0) {
-// 		for (const Entity& monster: monsters) {
-// 			if (std::find(active_targets.begin(), active_targets.end(), monster) == active_targets.end()) {
-// 				move(monster.pos, " DEFENDING");
-// 				active_targets.push_back(monster);
-// 				return true;
-// 			}
-// 		}
-// 	}
-// 	return false;
-// }
-
 bool	Game::attackTarget(const Entity& hero)
 {
-	// if (hero.current_target != NULL) {
-	// 	if (mana >= 10 && hero.current_target->shield_life == 0) {
-	// 		if (hero.current_target->isInRange4500(base) && hero.current_target->isInWindRange(hero.pos))
-	// 			return windy_day(center, " WOOSH");
-	// 		else if (hero.current_target->isInRange5000(base) && hero.current_target->isInSpellRange(hero.pos))
-	// 			return control(hero.current_target->id, enemy_base);
-	// 	}
-	if (hero.current_target)
+	if (hero.current_target) 
 		return move(hero.current_target->pos, " PERM");
-	// }
-	// return false;
+	return false;
+}
+
+bool	Game::useSpell(const Entity& hero)
+{
+	Entity* target = hero.current_target;
+
+	if (target && mana >= 10 && target->shield_life == 0) {
+		if (target->isInRange6000(base) && target->isInRange5000(base) == false
+			&& target->isInSpellRange(hero.pos) && target->movingToPos(base)
+			&& controlled.find(target->id) != controlled.end())
+				return control(target->id, enemy_base, " NOPE");
+		if (target->isInRange4500(base) && target->isInWindRange(hero.pos) && target->health > 10)
+			return windy_day(center, " WOOSH");
+	}
+	return false;
+}
+
+bool	Game::attack(const Entity& hero)
+{
+	if (defender_amt < 3 && hero.is_attacker) {
+		if (mana > 50) {
+			// do some attack stuff
+		}	
+	}
+	return false;
+}
+
+bool	Game::annoyingEnemy(const Entity& hero)
+{
+	if (mana >= 10) {
+		for (const Entity& enemy: opponents) {
+			if (enemy.isInRange7500(base) && round > 80) {
+				if (enemy.isInSpellRange(hero.pos) && hero.shield_life == 0)
+					return shield(hero.id, " NOPE");
+				else if (enemy.isInSpellRange(hero.pos))
+					return windy_day(center, " BYE");
+			}
+		}
+	}
+	return false;
 }
 
 bool	Game::defend(Entity& hero)
 {
 	bool attacked = false;
 
+	attacked = attacked || attack(hero);
+	attacked = attacked || annoyingEnemy(hero);
+	attacked = attacked || useSpell(hero);
 	attacked = attacked || attackTarget(hero);
 	return attacked;
 }
@@ -217,7 +243,7 @@ bool	Game::moveDefaultPos(Entity& hero)
 	int				radius = 1600;
 	Position		middle = hero.default_pos;
 	Position		goal;
-	static float tatta = 0;
+	static float 	tatta = 0;
 	tatta += 0.420; // tatta + dtatta
 
 	goal.x = radius * cos(tatta) + middle.x;
@@ -259,6 +285,8 @@ bool	Game::shield(const int id, const std::string& addon) {
 
 bool	Game::control(const int id, const Position& pos, const std::string& addon) {
 	mana -= 10;
-	std::cout << "SPELL CONTROL " << id << " " << pos.x << " " << pos.y << addon << std::endl;
+	this->controlled.insert(id);
+	int y_offset = (rand() % 5000) * (rand() % 2) ? 1 : -1;
+	std::cout << "SPELL CONTROL " << id << " " << pos.x << " " << pos.y + y_offset << addon << std::endl;
 	return true;
 }

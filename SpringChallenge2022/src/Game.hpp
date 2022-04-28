@@ -4,6 +4,7 @@
 #include "Position.hpp"
 #include "Entity.hpp"
 #include <vector>
+#include <set>
 
 # define HERO_AMT 3
 
@@ -17,11 +18,13 @@ struct Game
 // typedefs
 
 	typedef std::vector<Entity> vectity;
+	typedef std::set<size_t>	sset;
 
 // variables
 
 	Position	base;
 	Position	enemy_base;
+	int			defender_amt;
 	int			health;
 	int			enemy_health;
 	int			mana;
@@ -32,6 +35,7 @@ struct Game
 	vectity		monsters;
 	vectity		opponents;
 	vectity		active_targets;
+	sset		controlled;
 
 // construct
 
@@ -45,8 +49,11 @@ struct Game
 
 // logic
 
-	bool	stoopidAttack(Entity& hero);
 	void	permutationNation();
+
+	bool	useSpell(const Entity& hero);
+	bool	attack(const Entity& hero);
+	bool	annoyingEnemy(const Entity& hero);
 	bool	attackTarget(const Entity& hero);
 
 	bool	defend(Entity& hero);

@@ -44,6 +44,7 @@ struct Entity
 	Target		target;
 	Position	my_base;
 	Entity*		current_target;
+	bool		is_attacker;
 
 /////////////
 // Helpful //
