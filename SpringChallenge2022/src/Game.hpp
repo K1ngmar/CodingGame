@@ -51,8 +51,10 @@ struct Game
 
 	void	permutationNation();
 
-	bool	useSpell(const Entity& hero);
+	Entity*	findBestAttackEntity(const Entity& hero);
 	bool	attack(const Entity& hero);
+
+	bool	useSpell(const Entity& hero);
 	bool	annoyingEnemy(const Entity& hero);
 	bool	attackTarget(const Entity& hero);
 

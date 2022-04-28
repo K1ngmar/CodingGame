@@ -158,7 +158,7 @@ void	Game::permutationNation()
 		for (size_t j = 1; j < defender_amt; j++) {
 			rating = 0;
 			for (size_t i = 0; i < defender_amt; i++) {
-				if ((i * j) % defender_amt > monsters.size())
+				if ((i * j) % defender_amt >= monsters.size())
 					monster = NULL;
 				else
 					monster = &(monsters[(i * j) % defender_amt]);
@@ -169,10 +169,22 @@ void	Game::permutationNation()
 				if (monster)
 					rating += distance(tmp[i].hero->pos, monster->pos);
 			}
+			
 			if (rating < best_rating) {
+				best_rating = rating;
 				for (size_t i = 0; i < defender_amt; i++)
 					best[i] = {tmp[i].hero, tmp[i].target};
 			}
+
+
+			// std::cerr << "---- " << rating << " ----" << std::endl;
+			// std::cerr << tmp[0].hero->id << ", " << tmp[0].target->id << ", pos: " << tmp[0].target->pos.x << ", " << tmp[0].target->pos.y << std::endl;
+			// if (tmp[1].hero && tmp[1].target)
+			// 	std::cerr << tmp[1].hero->id << ", " << tmp[1].target->id << ", pos: " << tmp[1].target->pos.x << ", " << tmp[1].target->pos.y << std::endl;
+			// if (tmp[2].hero && tmp[2].target)
+			// 	std::cerr << tmp[2].hero->id << ", " << tmp[2].target->id << ", pos: " << tmp[2].target->pos.x << ", " << tmp[2].target->pos.y << std::endl;
+			std::cerr << std::endl;
+
 		}
 	}
 	for (size_t i = 0; i < defender_amt; i++) {
@@ -202,11 +214,36 @@ bool	Game::useSpell(const Entity& hero)
 	return false;
 }
 
+Entity*	Game::findBestAttackEntity(const Entity& hero)
+{
+	Entity* best = NULL;
+
+	for (Entity& monster: monsters) {
+		if (monster.isInSpellRange(hero.pos) && monster.shield_life == 0) {
+			if (best == NULL)
+				best = &monster;
+			else if (controlled.find(monster.id) == controlled.end())
+				best = &monster; // can now shield
+			else if (monster.health > best->health)
+				best = &monster;
+		}
+	}
+	return best;
+}
+
 bool	Game::attack(const Entity& hero)
 {
+	Entity* monster;
+
 	if (defender_amt < 3 && hero.is_attacker) {
 		if (mana > 50) {
-			// do some attack stuff
+			monster = findBestAttackEntity(hero);
+			if (monster) {
+				if (controlled.find(monster->id) == controlled.end())
+					return (control(monster->id, enemy_base));
+				else
+					return shield(monster->id);
+			}			
 		}	
 	}
 	return false;
@@ -286,7 +323,7 @@ bool	Game::shield(const int id, const std::string& addon) {
 bool	Game::control(const int id, const Position& pos, const std::string& addon) {
 	mana -= 10;
 	this->controlled.insert(id);
-	int y_offset = (rand() % 5000) * (rand() % 2) ? 1 : -1;
+	int y_offset = (rand() % 5000) * ((rand() % 2) ? 1 : -1);
 	std::cout << "SPELL CONTROL " << id << " " << pos.x << " " << pos.y + y_offset << addon << std::endl;
 	return true;
 }
