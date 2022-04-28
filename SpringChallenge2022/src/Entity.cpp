@@ -6,6 +6,14 @@
 // Operators //
 ///////////////
 
+bool operator <  (const Entity& lhs, const Entity& rhs) {
+	return (distance(lhs.pos, lhs.my_base) < distance(rhs.pos, rhs.my_base));
+}
+
+bool operator >  (const Entity& lhs, const Entity& rhs) {
+	return (distance(lhs.pos, lhs.my_base) > distance(rhs.pos, rhs.my_base));
+}
+
 std::istream& operator >> (std::istream& is, Type& type) {
 	int _type;
 	is >> _type;
@@ -28,6 +36,10 @@ bool operator == (const Entity& lhs, const Entity& rhs)
 /////////////
 // Helpful //
 /////////////
+
+bool	Entity::isInRange4500(const Position& pos) const {
+	return (distance(pos, this->pos) <= 4500);
+}
 
 bool	Entity::isInRange5000(const Position& pos) const {
 	return (distance(pos, this->pos) <= 5000);

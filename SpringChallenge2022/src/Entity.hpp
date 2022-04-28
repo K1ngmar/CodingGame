@@ -5,7 +5,13 @@
 #include <istream>
 #include <map>
 
-static const Position center = {8900, 4500};
+#define DEBUG 1
+
+#if DEBUG == 1
+    #define TRACE() dprintf(2, "%s:%d\n", __FUNCTION__,  __LINE__)
+#else
+    #define TRACE()
+#endif
 
 enum Type {
 	MONSTER,
@@ -36,13 +42,15 @@ struct Entity
 	Position	trajectory;
 	int			is_targeting;
 	Target		target;
-	bool		is_updated;
+	Position	my_base;
+	Entity*		current_target;
 
 /////////////
 // Helpful //
 /////////////
 public:
 
+	bool	isInRange4500(const Position& pos) const;
 	bool	isInRange5000(const Position& pos) const;
 	bool	isInRange6000(const Position& pos) const;
 	bool	isInRange7500(const Position& pos) const;
@@ -61,6 +69,9 @@ public:
 ///////////////
 
 	bool operator == (const Entity& lhs, const Entity& rhs);
+
+	bool operator <  (const Entity& lhs, const Entity& rhs);
+	bool operator >  (const Entity& lhs, const Entity& rhs);
 
 	std::istream& operator >> (std::istream& is, const Type& type);
 	std::istream& operator >> (std::istream& is, const Target& target);

@@ -5,15 +5,12 @@
 int main()
 {
 	Game		game;
-	std::string action;
 
-	game.init();
 	while(true)
 	{
 		game.parseRound();
-		for (const Entity& hero: game.heroes) {
-			action = game.generateAction(hero);
-			std::cout << action << std::endl;
+		for (Entity& hero: game.heroes) {
+			game.performAction(hero);
 		}
 	}
 	return (0);

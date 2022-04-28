@@ -2,7 +2,10 @@
 #pragma once
 
 #include "Position.hpp"
+#include "Entity.hpp"
 #include <vector>
+
+# define HERO_AMT 3
 
 struct Game
 {
@@ -28,13 +31,34 @@ struct Game
 	vectity		heroes;
 	vectity		monsters;
 	vectity		opponents;
+	vectity		active_targets;
 
 // construct
 
 	Game();
 
+	Entity	readEntity();
 	void	setEntity(Entity& entity);
 	void	update(Entity& entity);
-	void	init();
+	void	parseRound();
+	void	clearEntities();
+
+// logic
+
+	bool	stoopidAttack(Entity& hero);
+	void	permutationNation();
+	bool	attackTarget(const Entity& hero);
+
+	bool	defend(Entity& hero);
+	bool	moveDefaultPos(Entity& hero);
+
+	void	performAction(Entity& hero);
+
+// actions
+
+	bool	move(const Position& pos, const std::string& addon = "");
+	bool	windy_day(const Position& pos, const std::string& addon = "");
+	bool	shield(const int id, const std::string& addon = "");
+	bool	control(const int id, const Position& pos, const std::string& addon = " CONTROLLAA");
 
 };
