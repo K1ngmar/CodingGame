@@ -9,3 +9,5 @@
 ## Achievements 🏆
 * [Spring Challange 2021] 
   Gold league, placed 1585th
+* [Spring Challange 2022] 
+  Gold league, placed 1459th
